@@ -1,0 +1,180 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  PENGGUNA
+}
+
+enum Kebersihan {
+  SANGAT_BERSIH
+  BERSIH
+  STANDAR
+  KOTOR
+  SANGAT_KOTOR
+}
+
+enum MetodeSPK {
+  SAW
+  WP
+  TOPSIS
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  username    String   @unique
+  email       String   @unique
+  password    String
+  address     String?
+  role        Role
+
+  tenant      Tenant?
+  reviews     Review[]
+  bobots      UserBobot[]
+  histories   HistorySPK[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Tenant {
+  id               Int      @id @default(autoincrement())
+
+  adminId          Int      @unique
+  admin            User     @relation(fields: [adminId], references: [id])
+
+  nama             String
+  alamat           String
+  email            String?
+  deskripsi        String?
+  jamOperasional   String
+  telepon          String?
+  mapsUrl          String?
+  logo             String?
+
+  menus            Menu[]
+  galeris          Galeri[]
+  nilaiKategori    TenantNilai[]
+  reviews          Review[]
+}
+
+model Menu {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+
+  nama        String
+  deskripsi   String?
+  harga       Decimal
+  foto        String?
+
+  tenant      Tenant @relation(fields: [tenantId], references: [id])
+}
+
+model Galeri {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+
+  gambar      String
+  caption     String?
+
+  tenant      Tenant @relation(fields: [tenantId], references: [id])
+}
+
+model Kategori {
+  id          Int      @id @default(autoincrement())
+  nama        String
+
+  subKategori SubKategori[]
+  nilaiTenant TenantNilai[]
+  bobotUser   UserBobot[]
+}
+
+model SubKategori {
+  id          Int      @id @default(autoincrement())
+
+  kategoriId  Int
+  nama        String
+
+  skor        Int
+
+  kategori     Kategori @relation(fields: [kategoriId], references: [id])
+  tenantNilai  TenantNilai[]
+}
+
+model TenantNilai {
+
+  id              Int @id @default(autoincrement())
+
+  tenantId        Int
+  kategoriId      Int
+  subKategoriId   Int
+
+  nilai           Float
+
+  tenant          Tenant @relation(fields: [tenantId], references: [id])
+  kategori        Kategori @relation(fields: [kategoriId], references: [id])
+  subKategori     SubKategori @relation(fields: [subKategoriId], references: [id])
+
+}
+
+model UserBobot {
+
+  id          Int @id @default(autoincrement())
+
+  userId      Int
+  kategoriId  Int
+
+  bobot       Float
+
+  user         User @relation(fields: [userId], references: [id])
+  kategori     Kategori @relation(fields: [kategoriId], references: [id])
+
+}
+
+model Review {
+
+  id              Int @id @default(autoincrement())
+
+  tenantId        Int
+  userId          Int
+
+  rating          Float
+
+  kebersihan      Kebersihan
+
+  komentar        String?
+
+  balasan         String?
+
+  createdAt       DateTime @default(now())
+
+  tenant          Tenant @relation(fields: [tenantId], references: [id])
+  user            User @relation(fields: [userId], references: [id])
+
+}
+
+model HistorySPK {
+
+  id          Int @id @default(autoincrement())
+
+  userId      Int
+
+  metode      MetodeSPK
+
+  createdAt   DateTime @default(now())
+
+  user        User @relation(fields: [userId], references: [id])
+
+}
