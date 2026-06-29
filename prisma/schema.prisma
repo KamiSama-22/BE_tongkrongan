@@ -42,8 +42,6 @@ model User {
 
   tenant      Tenant?
   reviews     Review[]
-  bobots      UserBobot[]
-  histories   HistorySPK[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -57,6 +55,8 @@ model Tenant {
 
   nama             String
   alamat           String
+  ratingMaps       Float?
+  fasilitas        TenantFasilitas[]
   email            String?
   deskripsi        String?
   jamOperasional   String
@@ -98,7 +98,6 @@ model Kategori {
 
   subKategori SubKategori[]
   nilaiTenant TenantNilai[]
-  bobotUser   UserBobot[]
 }
 
 model SubKategori {
@@ -107,7 +106,8 @@ model SubKategori {
   kategoriId  Int
   nama        String
 
-  skor        Int
+  nilai       Int
+  keterangan  String
 
   kategori     Kategori @relation(fields: [kategoriId], references: [id])
   tenantNilai  TenantNilai[]
@@ -129,19 +129,6 @@ model TenantNilai {
 
 }
 
-model UserBobot {
-
-  id          Int @id @default(autoincrement())
-
-  userId      Int
-  kategoriId  Int
-
-  bobot       Float
-
-  user         User @relation(fields: [userId], references: [id])
-  kategori     Kategori @relation(fields: [kategoriId], references: [id])
-
-}
 
 model Review {
 
@@ -165,16 +152,24 @@ model Review {
 
 }
 
-model HistorySPK {
 
-  id          Int @id @default(autoincrement())
-
-  userId      Int
-
-  metode      MetodeSPK
-
+model Fasilitas {
+  id          Int      @id @default(autoincrement())
+  nama        String   @unique
+  poin        Int
   createdAt   DateTime @default(now())
 
-  user        User @relation(fields: [userId], references: [id])
+  tenants     TenantFasilitas[]
+}
 
+model TenantFasilitas {
+  id           Int @id @default(autoincrement())
+
+  tenantId     Int
+  fasilitasId  Int
+
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fasilitas    Fasilitas  @relation(fields: [fasilitasId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, fasilitasId])
 }
