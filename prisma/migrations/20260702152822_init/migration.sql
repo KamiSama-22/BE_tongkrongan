@@ -20,6 +20,7 @@ CREATE TABLE `Tenant` (
     `adminId` INTEGER NOT NULL,
     `nama` VARCHAR(191) NOT NULL,
     `alamat` VARCHAR(191) NOT NULL,
+    `ratingMaps` DOUBLE NULL,
     `email` VARCHAR(191) NULL,
     `deskripsi` VARCHAR(191) NULL,
     `jamOperasional` VARCHAR(191) NOT NULL,
@@ -66,7 +67,8 @@ CREATE TABLE `SubKategori` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `kategoriId` INTEGER NOT NULL,
     `nama` VARCHAR(191) NOT NULL,
-    `skor` INTEGER NOT NULL,
+    `nilai` INTEGER NOT NULL,
+    `keterangan` VARCHAR(191) NOT NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -78,16 +80,6 @@ CREATE TABLE `TenantNilai` (
     `kategoriId` INTEGER NOT NULL,
     `subKategoriId` INTEGER NOT NULL,
     `nilai` DOUBLE NOT NULL,
-
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `UserBobot` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `userId` INTEGER NOT NULL,
-    `kategoriId` INTEGER NOT NULL,
-    `bobot` DOUBLE NOT NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -107,13 +99,22 @@ CREATE TABLE `Review` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `HistorySPK` (
+CREATE TABLE `Fasilitas` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `userId` INTEGER NOT NULL,
-    `metode` ENUM('SAW', 'WP', 'TOPSIS') NOT NULL,
+    `nama` VARCHAR(191) NOT NULL,
+    `poin` INTEGER NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
+    UNIQUE INDEX `Fasilitas_nama_key`(`nama`),
     PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Kepemilikan` (
+    `tenantId` INTEGER NOT NULL,
+    `fasilitasId` INTEGER NOT NULL,
+
+    PRIMARY KEY (`tenantId`, `fasilitasId`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
@@ -138,16 +139,13 @@ ALTER TABLE `TenantNilai` ADD CONSTRAINT `TenantNilai_kategoriId_fkey` FOREIGN K
 ALTER TABLE `TenantNilai` ADD CONSTRAINT `TenantNilai_subKategoriId_fkey` FOREIGN KEY (`subKategoriId`) REFERENCES `SubKategori`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `UserBobot` ADD CONSTRAINT `UserBobot_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `UserBobot` ADD CONSTRAINT `UserBobot_kategoriId_fkey` FOREIGN KEY (`kategoriId`) REFERENCES `Kategori`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE `Review` ADD CONSTRAINT `Review_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Review` ADD CONSTRAINT `Review_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `HistorySPK` ADD CONSTRAINT `HistorySPK_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Kepemilikan` ADD CONSTRAINT `Kepemilikan_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Kepemilikan` ADD CONSTRAINT `Kepemilikan_fasilitasId_fkey` FOREIGN KEY (`fasilitasId`) REFERENCES `Fasilitas`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

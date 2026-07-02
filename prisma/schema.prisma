@@ -56,7 +56,6 @@ model Tenant {
   nama             String
   alamat           String
   ratingMaps       Float?
-  fasilitas        TenantFasilitas[]
   email            String?
   deskripsi        String?
   jamOperasional   String
@@ -64,6 +63,8 @@ model Tenant {
   mapsUrl          String?
   logo             String?
 
+  // Relasi
+  kepemilikan      Kepemilikan[]
   menus            Menu[]
   galeris          Galeri[]
   nilaiKategori    TenantNilai[]
@@ -159,17 +160,17 @@ model Fasilitas {
   poin        Int
   createdAt   DateTime @default(now())
 
-  tenants     TenantFasilitas[]
+  kepemilikan  Kepemilikan[]
 }
 
-model TenantFasilitas {
-  id           Int @id @default(autoincrement())
 
+
+model Kepemilikan {
   tenantId     Int
   fasilitasId  Int
 
-  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  fasilitas    Fasilitas  @relation(fields: [fasilitasId], references: [id], onDelete: Cascade)
+  tenant        Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fasilitas     Fasilitas  @relation(fields: [fasilitasId], references: [id], onDelete: Cascade)
 
-  @@unique([tenantId, fasilitasId])
+  @@id([tenantId, fasilitasId])
 }
