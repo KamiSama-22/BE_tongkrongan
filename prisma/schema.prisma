@@ -75,7 +75,7 @@ model Menu {
   tenantId    Int
   nama        String
   deskripsi   String?
-  harga       Decimal
+  harga       Decimal @db.Decimal(10, 2)
   foto        String?
 
   tenant      Tenant @relation(fields: [tenantId], references: [id])

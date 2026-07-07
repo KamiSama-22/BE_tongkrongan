@@ -7,6 +7,13 @@ import authRoutes from "./routes/authRoutes";
 import testRoutes from "./routes/testRoutes";
 import userRoutes from "./routes/userRoutes";
 import tenantRoutes from "./routes/tenantRoutes";
+import kategoriRoutes from "./routes/kategoriRoutes";
+import subKategoriRoutes from "./routes/subkategoriRoutes";
+import menuRoutes from "./routes/menuRoutes";
+import galeriRoutes from "./routes/galeriRoutes";
+import fasilitasRoutes from "./routes/fasilitasRoutes";
+
+
 
 dotenv.config();
 
@@ -21,5 +28,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/test", testRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tenants", tenantRoutes);
+app.use("/api/kategori", kategoriRoutes);
+app.use("/api/sub-kategori", subKategoriRoutes);
+app.use("/api/menu", menuRoutes);
+app.use("/api/galeri", galeriRoutes);
+app.use("/api/fasilitas", fasilitasRoutes);
 
 export default app;

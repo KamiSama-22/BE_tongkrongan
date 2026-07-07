@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
-import kategoriService from "../services/kategoriService";
+import galeriService from "../services/galeriService";
 
-class KategoriController {
+class GaleriController {
   async getAll(req: Request, res: Response) {
     try {
-      const data = await kategoriService.getAll();
+      const data = await galeriService.getAll();
 
       res.json({
         success: true,
@@ -20,7 +20,7 @@ class KategoriController {
 
   async getById(req: Request, res: Response) {
     try {
-      const data = await kategoriService.getById(Number(req.params.id));
+      const data = await galeriService.getById(Number(req.params.id));
 
       res.json({
         success: true,
@@ -36,7 +36,7 @@ class KategoriController {
 
   async create(req: Request, res: Response) {
     try {
-      const data = await kategoriService.create(req.body);
+      const data = await galeriService.create(req.body);
 
       res.status(201).json({
         success: true,
@@ -52,7 +52,7 @@ class KategoriController {
 
   async update(req: Request, res: Response) {
     try {
-      const data = await kategoriService.update(
+      const data = await galeriService.update(
         Number(req.params.id),
         req.body
       );
@@ -71,11 +71,11 @@ class KategoriController {
 
   async delete(req: Request, res: Response) {
     try {
-      await kategoriService.delete(Number(req.params.id));
+      const result = await galeriService.delete(Number(req.params.id));
 
       res.json({
         success: true,
-        message: "Kategori berhasil dihapus",
+        message: result.message,
       });
     } catch (error: any) {
       res.status(400).json({
@@ -86,4 +86,4 @@ class KategoriController {
   }
 }
 
-export default new KategoriController();
+export default new GaleriController();

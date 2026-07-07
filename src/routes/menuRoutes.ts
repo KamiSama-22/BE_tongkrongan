@@ -1,33 +1,32 @@
 import { Router } from "express";
-import galeriController from "../controllers/galeriController";
+import menuController from "../controllers/menuController";
 import { authenticate } from "../middleware/auth";
 import { authorize } from "../middleware/role";
 
 const router = Router();
 
-router.get("/", galeriController.getAll);
-
-router.get("/:id", galeriController.getById);
+router.get("/", menuController.getAll);
+router.get("/:id", menuController.getById);
 
 router.post(
   "/",
   authenticate,
   authorize("TENANT_ADMIN"),
-  galeriController.create
+  menuController.create
 );
 
 router.put(
   "/:id",
   authenticate,
   authorize("TENANT_ADMIN"),
-  galeriController.update
+  menuController.update
 );
 
 router.delete(
   "/:id",
   authenticate,
   authorize("TENANT_ADMIN"),
-  galeriController.delete
+  menuController.delete
 );
 
 export default router;
