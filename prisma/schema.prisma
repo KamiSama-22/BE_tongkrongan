@@ -4,12 +4,12 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -63,7 +63,6 @@ model Tenant {
   mapsUrl          String?
   logo             String?
 
-  // Relasi
   kepemilikan      Kepemilikan[]
   menus            Menu[]
   galeris          Galeri[]
@@ -74,7 +73,6 @@ model Tenant {
 model Menu {
   id          Int      @id @default(autoincrement())
   tenantId    Int
-
   nama        String
   deskripsi   String?
   harga       Decimal
@@ -86,7 +84,6 @@ model Menu {
 model Galeri {
   id          Int      @id @default(autoincrement())
   tenantId    Int
-
   gambar      String
   caption     String?
 
@@ -103,10 +100,8 @@ model Kategori {
 
 model SubKategori {
   id          Int      @id @default(autoincrement())
-
   kategoriId  Int
   nama        String
-
   nilai       Int
   keterangan  String
 
@@ -117,11 +112,9 @@ model SubKategori {
 model TenantNilai {
 
   id              Int @id @default(autoincrement())
-
   tenantId        Int
   kategoriId      Int
   subKategoriId   Int
-
   nilai           Float
 
   tenant          Tenant @relation(fields: [tenantId], references: [id])
@@ -134,18 +127,12 @@ model TenantNilai {
 model Review {
 
   id              Int @id @default(autoincrement())
-
   tenantId        Int
   userId          Int
-
   rating          Float
-
   kebersihan      Kebersihan
-
   komentar        String?
-
   balasan         String?
-
   createdAt       DateTime @default(now())
 
   tenant          Tenant @relation(fields: [tenantId], references: [id])
