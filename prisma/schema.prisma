@@ -32,6 +32,7 @@ enum MetodeSPK {
   TOPSIS
 }
 
+
 model User {
   id          Int      @id @default(autoincrement())
   username    String   @unique
@@ -93,6 +94,7 @@ model Galeri {
 model Kategori {
   id          Int      @id @default(autoincrement())
   nama        String
+  atribut     Atribut
 
   subKategori SubKategori[]
   nilaiTenant TenantNilai[]

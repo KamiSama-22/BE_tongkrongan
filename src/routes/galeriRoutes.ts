@@ -2,6 +2,7 @@ import { Router } from "express";
 import galeriController from "../controllers/galeriController";
 import { authenticate } from "../middleware/auth";
 import { authorize } from "../middleware/role";
+import upload from "../config/multer";
 
 const router = Router();
 
@@ -13,6 +14,7 @@ router.post(
   "/",
   authenticate,
   authorize("TENANT_ADMIN"),
+  upload.single("gambar"),
   galeriController.create
 );
 

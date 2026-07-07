@@ -2,30 +2,33 @@ import multer from "multer";
 import path from "path";
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "src/uploads");
+  destination(req, file, cb) {
+    cb(null, "uploads/");
   },
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${file.originalname}`;
-    cb(null, uniqueName);
+
+  filename(req, file, cb) {
+    const ext = path.extname(file.originalname);
+
+    cb(
+      null,
+      Date.now() + "-" + Math.round(Math.random() * 1e9) + ext
+    );
   },
 });
 
-const fileFilter: multer.Options["fileFilter"] = (req, file, cb) => {
-  const allowed = [".jpg", ".jpeg", ".png"];
-
-  const ext = path.extname(file.originalname).toLowerCase();
-
-  if (allowed.includes(ext)) {
+const fileFilter: multer.Options["fileFilter"] = (
+  req,
+  file,
+  cb
+) => {
+  if (file.mimetype.startsWith("image/")) {
     cb(null, true);
   } else {
-    cb(new Error("File harus berupa JPG atau PNG"));
+    cb(new Error("File harus berupa gambar"));
   }
 };
 
-const upload = multer({
+export default multer({
   storage,
   fileFilter,
 });
-
-export default upload;

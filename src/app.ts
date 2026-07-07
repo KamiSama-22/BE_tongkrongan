@@ -12,7 +12,11 @@ import subKategoriRoutes from "./routes/subkategoriRoutes";
 import menuRoutes from "./routes/menuRoutes";
 import galeriRoutes from "./routes/galeriRoutes";
 import fasilitasRoutes from "./routes/fasilitasRoutes";
-
+import kepemilikanRoutes from "./routes/kepemilikanRoutes";
+import tenantNilaiRoutes from "./routes/tenantnilaiRoutes";
+import reviewRoutes from "./routes/reviewRoutes";
+import path from "path";
+import spkRoutes from "./routes/spkRoutes";
 
 
 dotenv.config();
@@ -33,5 +37,10 @@ app.use("/api/sub-kategori", subKategoriRoutes);
 app.use("/api/menu", menuRoutes);
 app.use("/api/galeri", galeriRoutes);
 app.use("/api/fasilitas", fasilitasRoutes);
+app.use("/api/kepemilikan", kepemilikanRoutes);
+app.use("/api/tenant-nilai", tenantNilaiRoutes);
+app.use("/api/review", reviewRoutes);
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/api/spk", spkRoutes);
 
 export default app;

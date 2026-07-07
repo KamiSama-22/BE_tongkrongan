@@ -34,21 +34,25 @@ class GaleriController {
     }
   }
 
-  async create(req: Request, res: Response) {
-    try {
-      const data = await galeriService.create(req.body);
+async create(req: Request, res: Response) {
+  try {
+    const data = await galeriService.create({
+      tenantId: Number(req.body.tenantId),
+      gambar: req.file?.filename || "",
+      caption: req.body.caption,
+    });
 
-      res.status(201).json({
-        success: true,
-        data,
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
-    }
+    res.status(201).json({
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
+}
 
   async update(req: Request, res: Response) {
     try {
