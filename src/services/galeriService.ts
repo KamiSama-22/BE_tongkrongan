@@ -1,14 +1,22 @@
 import prisma from "../config/prisma";
 
+// DTO disesuaikan: tenantId wajib, karena setiap data di sistem ini 
+// harus terikat dengan tenant pemiliknya.
 interface GaleriDTO {
-  tenantId: number;
-  gambar: string;
+  tenantId: number; 
+  gambar: string;   // Ini adalah URL atau path gambar
   caption?: string;
+  tipe: string;     // Contoh: "MENU", "LOGO", "BANNER"
 }
 
 class GaleriService {
-  async getAll() {
-    return prisma.galeri.findMany({
+  // Mengambil semua galeri berdasarkan tenant yang sedang login
+  // (Ini akan mencegah data galeri tercampur antar tenant)
+  async getAll(tenantId: number) {
+    return await prisma.galeri.findMany({
+      where: {
+        tenantId: tenantId,
+      },
       include: {
         tenant: {
           select: {
@@ -18,7 +26,7 @@ class GaleriService {
         },
       },
       orderBy: {
-        id: "asc",
+        createdAt: "desc", // Foto terbaru muncul di atas
       },
     });
   }
@@ -38,23 +46,31 @@ class GaleriService {
     return galeri;
   }
 
+  // Membuat data baru
   async create(data: GaleriDTO) {
-    return prisma.galeri.create({
+    return await prisma.galeri.create({
       data: {
-        tenantId: data.tenantId,
-        gambar: data.gambar,
-        caption: data.caption,
+        tenantId: Number(data.tenantId),
+        url: data.gambar,
+        caption: data.caption || "",
+        tipe: data.tipe,
       },
     });
   }
 
+  // Update data
   async update(id: number, data: Partial<GaleriDTO>) {
-    return prisma.galeri.update({
+    return await prisma.galeri.update({
       where: { id },
-      data,
+      data: {
+        url: data.gambar,
+        caption: data.caption,
+        tipe: data.tipe,
+      },
     });
   }
 
+  // Hapus data
   async delete(id: number) {
     await prisma.galeri.delete({
       where: { id },

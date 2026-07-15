@@ -1,45 +1,31 @@
-import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import { Request, Response, NextFunction } from "express"; // Import wajib
+import { verifyToken } from "../config/jwt";
 
+// Mendefinisikan AuthRequest agar tidak merah
 export interface AuthRequest extends Request {
-  user?: {
-    id: number;
-    role: string;
-  };
+  user?: any;
 }
 
-export const authenticate = (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => {
+export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
+  console.log("--- MIDDLEWARE AUTHENTICATE DIJALANKAN ---"); 
+  console.log("Headers Authorization:", req.headers.authorization);
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-    return res.status(401).json({
-      success: false,
-      message: "Token tidak ditemukan",
-    });
+    return res.status(401).json({ message: "Token tidak ditemukan" });
   }
 
+  // Split untuk mengambil token setelah "Bearer "
   const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET!
-    ) as {
-      id: number;
-      role: string;
-    };
-
+    // Verifikasi token
+    const decoded = verifyToken(token);
     req.user = decoded;
-
     next();
-  } catch {
-    return res.status(401).json({
-      success: false,
-      message: "Token tidak valid",
-    });
+  } catch (error: any) {
+    console.log("Error Verifikasi:", error.message);
+    // Jika masih 401 di sini, berarti kuncinya tidak cocok
+    return res.status(401).json({ message: "Token tidak valid" });
   }
 };

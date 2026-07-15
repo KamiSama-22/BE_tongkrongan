@@ -1,80 +1,30 @@
-import { Request, Response } from "express";
-import sawService from "../services/sawService";
-import wpService from "../services/wpService";
-import topsisService from "../services/topsisService";
+import { Response } from "express";
+import SAWService from "../services/sawService";
+import WPService from "../services/wpService";
+import TOPSISService from "../services/topsisService";
 
-class SpkController {
-  async calculate(req: Request, res: Response) {
+export const calculate = async (req: any, res: Response) => {
+    console.log("Data yang diterima backend:", req.body);
   try {
-    const { metode, bobot } = req.body;
-
-    // ==========================
-    // VALIDASI BOBOT
-    // ==========================
-
-    if (!bobot) {
-      return res.status(400).json({
-        success: false,
-        message: "Bobot wajib diisi",
-      });
+    const { bobot } = req.body;
+    
+    // VALIDASI BOBOT: Jika bobot tidak ada/null, berikan error yang jelas
+    if (!bobot || typeof bobot !== 'object') {
+      return res.status(400).json({ success: false, message: "Data bobot tidak valid atau kosong" });
     }
 
-    if (Object.keys(bobot).length !== 6) {
-      return res.status(400).json({
-        success: false,
-        message: "Semua kategori harus memiliki bobot",
-      });
-    }
+    const user = req.user as any; 
+    const tenantId = user?.tenantId || null; 
 
-    const totalBobot = Object.values(bobot).reduce(
-      (a: number, b: any) => a + Number(b),
-      0
-    );
+    const data = {
+        SAW: await SAWService.calculate(bobot, tenantId),
+        WP: await WPService.calculate(bobot, tenantId),
+        TOPSIS: await TOPSISService.calculate(bobot, tenantId)
+    };
 
-    if (totalBobot !== 100) {
-      return res.status(400).json({
-        success: false,
-        message: "Total bobot harus 100",
-      });
-    }
-
-    // ==========================
-    // PILIH METODE
-    // ==========================
-
-    let hasil;
-
-    switch (metode.toUpperCase()) {
-      case "SAW":
-        hasil = await sawService.calculate(bobot);
-        break;
-
-      case "WP":
-        hasil = await wpService.calculate(bobot);
-        break;
-
-      case "TOPSIS":
-        hasil = await topsisService.calculate(bobot);
-        break;
-
-      default:
-        return res.status(400).json({
-          success: false,
-          message: "Metode tidak valid",
-        });
-    }
-
-    return res.json({
-      success: true,
-      data: hasil,
-    });
-  } catch (error: any) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return res.json({ success: true, data });
+  } catch (err: any) {
+    console.error("SERVER ERROR:", err);
+    return res.status(500).json({ success: false, message: err.message });
   }
-}
-}
-
-export default new SpkController();
+};

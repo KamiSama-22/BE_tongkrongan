@@ -31,7 +31,11 @@ enum MetodeSPK {
   WP
   TOPSIS
 }
-
+enum StatusTenant {
+  PENDING
+  APPROVED
+  REJECTED
+}
 
 model User {
   id          Int      @id @default(autoincrement())
@@ -50,19 +54,21 @@ model User {
 
 model Tenant {
   id               Int      @id @default(autoincrement())
-
   adminId          Int      @unique
   admin            User     @relation(fields: [adminId], references: [id])
 
   nama             String
   alamat           String
   ratingMaps       Float?
+  harga            String?
   email            String?
   deskripsi        String?
   jamOperasional   String
   telepon          String?
   mapsUrl          String?
   logo             String?
+
+  status           StatusTenant @default(PENDING)
 
   kepemilikan      Kepemilikan[]
   menus            Menu[]
@@ -83,18 +89,21 @@ model Menu {
 }
 
 model Galeri {
-  id          Int      @id @default(autoincrement())
-  tenantId    Int
-  gambar      String
-  caption     String?
-
-  tenant      Tenant @relation(fields: [tenantId], references: [id])
+  id        Int      @id @default(autoincrement())
+  url       String   // Ini yang kamu panggil 'gambar' di service
+  caption   String?
+  tipe      String   // "MENU", "LOGO", "UMUM"
+  
+  tenantId  Int
+  
+  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+  
+  createdAt DateTime @default(now())
 }
 
 model Kategori {
   id          Int      @id @default(autoincrement())
   nama        String
-  atribut     Atribut
 
   subKategori SubKategori[]
   nilaiTenant TenantNilai[]

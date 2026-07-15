@@ -1,26 +1,13 @@
 import prisma from "../config/prisma";
 
-interface MenuDTO {
-  tenantId: number;
-  nama: string;
-  deskripsi?: string;
-  harga: number;
-  foto?: string;
-}
-
 class MenuService {
-  async getAll() {
-    return prisma.menu.findMany({
-      include: {
-        tenant: {
-          select: {
-            id: true,
-            nama: true,
-          },
-        },
-      },
-    });
-  }
+// MenuService.ts
+async getAll(tenantId: number) {
+  return await prisma.menu.findMany({
+    where: { tenantId: tenantId },
+    include: { tenant: true },
+  });
+}
 
   async getById(id: number) {
     const menu = await prisma.menu.findUnique({
@@ -30,32 +17,40 @@ class MenuService {
       },
     });
 
-    if (!menu) throw new Error("Menu tidak ditemukan");
-
+    if (!menu) {
+      throw new Error("Menu tidak ditemukan");
+    }
     return menu;
   }
 
-  async create(data: MenuDTO) {
-    return prisma.menu.create({
-      data,
+  // 3. Perbaikan fungsi create
+  async create(data: any) {
+    return await prisma.menu.create({
+      data: {
+        tenantId: Number(data.tenantId),
+        nama: data.nama,
+        deskripsi: data.deskripsi,
+        harga: Number(data.harga),
+        foto: data.foto ?? null,
+      },
     });
   }
 
-  async update(id: number, data: Partial<MenuDTO>) {
-    await this.getById(id);
-
-    return prisma.menu.update({
+  async update(id: number, data: any, tenantId: number | undefined) {
+    return await prisma.menu.update({
       where: { id },
-      data,
+      data: {
+        nama: data.nama,
+        deskripsi: data.deskripsi,
+        harga: Number(data.harga),
+        foto: data.foto,
+      },
     });
   }
 
-  async delete(id: number) {
-    await this.getById(id);
-
-    return prisma.menu.delete({
-      where: { id },
-    });
+  async delete(id: number, tenantId: number | undefined) {
+    await prisma.menu.delete({ where: { id } });
+    return { message: "Menu berhasil dihapus" };
   }
 }
 

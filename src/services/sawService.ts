@@ -1,159 +1,102 @@
-import spkHelper from "./helpers/spkHelper";
+import { getRawData } from "./helpers/spkHelper";
 
-class SawService {
-  async calculate(bobot: Record<number, number>) {
-    // Ambil data
-    const { tenants, kategori } = await spkHelper.getData();
+interface Bobot {
+  harga: number;
+  jamOperasional: number;
+  menu: number;
+  fasilitas: number;
+  rating: number;
+  kebersihan: number;
+}
 
-    // ==========================
-    // STEP 1 - Matriks Keputusan
-    // ==========================
+class SAWService {
+  async calculate(bobot: Bobot, tenantId: number) {
+    const rawData = await getRawData() || [];
+    
+    // Pastikan bobot default ada jika dari frontend kosong
+    const safeBobot = (bobot && typeof bobot === 'object') 
+      ? bobot 
+      : { harga: 0, jamOperasional: 0, menu: 0, fasilitas: 0, rating: 0, kebersihan: 0 };
 
-    const matriksKeputusan = tenants.map((tenant) => ({
-      tenantId: tenant.id,
-      nama: tenant.nama,
-      nilai: tenant.nilaiKategori.map((item) => ({
-        kategoriId: item.kategoriId,
-        kategori: item.kategori.nama,
-        nilai: item.nilai,
-      })),
+    const validData = Array.isArray(rawData) ? rawData.filter(item => item) : [];
+    if (validData.length === 0) throw new Error("Data tidak ditemukan.");
+
+    // 1. BERSINKAN DATA MENTAH
+    const cleanData = validData.map(r => ({
+      nama: r.nama || "Unknown",
+      harga: Number(r.harga) || 1,
+      jam: Number(r.jamOperasional) || 0,
+      menu: Number(r.menu) || 0,
+      fas: Number(r.fasilitas) || 0,
+      rating: Number(r.rating) || 0,
+      keb: Number(r.kebersihan) || 0
     }));
 
-    // ==========================
-    // STEP 2 - Atribut
-    // ==========================
+    // --- PERBAIKAN FATAL: CARI NILAI MAX DINAMIS DARI DATA AKTUAL ---
+    // Menggunakan Math.max untuk mencari angka terbesar di kolom tersebut
+    const maxHarga = Math.min(...cleanData.map(r => r.harga), 1);
+    const maxJam = Math.max(...cleanData.map(r => r.jam), 1);
+    const maxMenu = Math.max(...cleanData.map(r => r.menu), 1);
+    const maxFas = Math.max(...cleanData.map(r => r.fas), 1);
+    const maxRating = Math.max(...cleanData.map(r => r.rating), 1);
+    const maxKeb = Math.max(...cleanData.map(r => r.keb), 1);
 
-    const atribut: Record<number, "BENEFIT" | "COST"> = {
-      1: "COST", // Harga
-      2: "BENEFIT", // Jam Operasional
-      3: "BENEFIT", // Menu
-      4: "BENEFIT", // Fasilitas
-      5: "BENEFIT", // Rating
-      6: "BENEFIT", // Kebersihan
-    };
-
-    const pembagi: Record<number, number> = {};
-
-    for (const k of kategori) {
-      const semuaNilai = tenants
-        .flatMap((t) => t.nilaiKategori)
-        .filter((x) => x.kategoriId === k.id)
-        .map((x) => x.nilai);
-
-      pembagi[k.id] =
-        atribut[k.id] === "BENEFIT"
-          ? Math.max(...semuaNilai)
-          : Math.min(...semuaNilai);
-    }
-
-    // ==========================
-    // STEP 3 - Normalisasi
-    // ==========================
-
-    const normalisasi = matriksKeputusan.map((tenant) => ({
-      tenantId: tenant.tenantId,
-      nama: tenant.nama,
-      nilai: tenant.nilai.map((item) => {
-        const hasil =
-          atribut[item.kategoriId] === "BENEFIT"
-            ? item.nilai / pembagi[item.kategoriId]
-            : pembagi[item.kategoriId] / item.nilai;
-
-        return {
-          kategoriId: item.kategoriId,
-          kategori: item.kategori,
-          nilai: Number(hasil.toFixed(4)),
-        };
-      }),
+    // 2. NORMALISASI (Rumus Benefit: Nilai / Nilai Max)
+    const normalized = cleanData.map(r => ({
+      nama: r.nama,
+      harga: parseFloat((maxHarga / r.harga).toFixed(3)),
+      jam: parseFloat((r.jam / maxJam).toFixed(3)),
+      menu: parseFloat((r.menu / maxMenu).toFixed(3)),
+      fas: parseFloat((r.fas / maxFas).toFixed(3)),
+      rating: parseFloat((r.rating / maxRating).toFixed(3)),
+      keb: parseFloat((r.keb / maxKeb).toFixed(3))
     }));
 
-    // ==========================
-    // STEP 4 - Preferensi
-    // ==========================
-
-    const preferensi = normalisasi.map((tenant) => {
-      let total = 0;
-
-      const detail = tenant.nilai.map((item) => {
-        const bobotKategori = bobot[item.kategoriId] || 0;
-
-        const hasil = item.nilai * bobotKategori;
-
-        total += hasil;
-
-        return {
-          kategoriId: item.kategoriId,
-          kategori: item.kategori,
-          normalisasi: item.nilai,
-          bobot: bobotKategori,
-          hasil: Number(hasil.toFixed(4)),
-          rumus: `${item.nilai.toFixed(4)} × ${bobotKategori} = ${hasil.toFixed(
-            4
-          )}`,
-        };
-      });
-
-      return {
-        tenantId: tenant.tenantId,
-        nama: tenant.nama,
-        detail,
-        total: Number(total.toFixed(4)),
-        rumusTotal: `${detail
-          .map((d) => d.hasil.toFixed(4))
-          .join(" + ")} = ${total.toFixed(4)}`,
-      };
-    });
-
-    // ==========================
-    // STEP 5 - Ranking
-    // ==========================
-
-    const ranking = [...preferensi]
-      .sort((a, b) => b.total - a.total)
-      .map((item, index) => ({
-        peringkat: index + 1,
-        tenantId: item.tenantId,
-        nama: item.nama,
-        nilai: item.total,
-        status:
-          index === 0
-            ? "Sangat Direkomendasikan"
-            : index < 5
-            ? "Direkomendasikan"
-            : "Alternatif",
-      }));
-
-    // ==========================
-    // STEP 6 - Rekomendasi
-    // ==========================
-
-    const rekomendasi = ranking.slice(0, 5);
-
-    // ==========================
-    // STEP 7 - Informasi Kategori
-    // ==========================
-
-    const informasiKategori = kategori.map((k) => ({
-      id: k.id,
-      nama: k.nama,
-      atribut: atribut[k.id],
+    // 3. PREFERENSI (Normalisasi * Persentase Bobot)
+    const preferensi = normalized.map(r => ({
+      nama: r.nama,
+      harga: parseFloat((r.harga * ((safeBobot.harga || 0) / 100)).toFixed(4)),
+      jam: parseFloat((r.jam * ((safeBobot.jamOperasional || 0) / 100)).toFixed(4)),
+      menu: parseFloat((r.menu * ((safeBobot.menu || 0) / 100)).toFixed(4)),
+      fas: parseFloat((r.fas * ((safeBobot.fasilitas || 0) / 100)).toFixed(4)),
+      rating: parseFloat((r.rating * ((safeBobot.rating || 0) / 100)).toFixed(4)),
+      keb: parseFloat((r.keb * ((safeBobot.kebersihan || 0) / 100)).toFixed(4))
     }));
 
-    // ==========================
-    // RESPONSE
-    // ==========================
+    // 4. PERANGKINGAN (Sum dari Preferensi)
+    const ranking = preferensi.map(r => ({
+      nama: r.nama,
+      score: parseFloat((r.harga + r.jam + r.menu + r.fas + r.rating + r.keb).toFixed(4))
+    })).sort((a, b) => b.score - a.score);
 
+    // 5. RETURN 4 TAHAP KE FRONTEND
     return {
-      metode: "SAW",
-      kategori: informasiKategori,
-      bobot,
-      matriksKeputusan,
-      normalisasi,
-      preferensi,
-      ranking,
-      rekomendasi,
+      name: "SAW",
+      bobot: safeBobot, // WAJIB DIKIRIM AGAR TAMPIL DI FRONTEND
+      steps: [
+        { 
+          title: "Matriks Keputusan", 
+          headers: ["Nama", "Harga", "Jam", "Menu", "Fasilitas", "Rating", "Kebersihan"], 
+          data: cleanData 
+        },
+        { 
+          title: "Normalisasi (R)", 
+          headers: ["Nama", "Harga", "Jam", "Menu", "Fasilitas", "Rating", "Kebersihan"], 
+          data: normalized 
+        },
+        { 
+          title: "Matriks Preferensi (V)", // TABEL BARU
+          headers: ["Nama", "Harga", "Jam", "Menu", "Fasilitas", "Rating", "Kebersihan"], 
+          data: preferensi 
+        },
+        { 
+          title: "Perangkingan", 
+          headers: ["Nama", "Skor Akhir"], 
+          data: ranking 
+        }
+      ]
     };
   }
 }
 
-export default new SawService();
+export default new SAWService();

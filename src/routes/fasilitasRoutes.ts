@@ -1,33 +1,45 @@
 import { Router } from "express";
-import fasilitasController from "../controllers/fasilitasController";
+import {
+  getFasilitas,          // Ambil fungsi untuk Master Fasilitas
+  createFasilitas,       // Tambah Master Fasilitas
+  getFasilitasById,      // Detail Master Fasilitas
+  updateFasilitas,       // Edit Master Fasilitas
+  deleteFasilitas,       // Hapus Master Fasilitas
+  getTenantFasilitas,    
+  updateTenantFasilitas, 
+} from "../controllers/fasilitasController";
 import { authenticate } from "../middleware/auth";
-import { authorize } from "../middleware/role";
 
 const router = Router();
 
-router.get("/", authenticate, fasilitasController.getAll);
+// ==========================================
+// 1. ROUTE MASTER FASILITAS (Super Admin / Umum)
+// ==========================================
 
-router.get("/:id", authenticate, fasilitasController.getById);
+// GET /api/fasilitas (Mengambil SEMUA master fasilitas)
+router.get("/", getFasilitas); 
 
-router.post(
-  "/",
-  authenticate,
-  authorize("SUPER_ADMIN"),
-  fasilitasController.create
-);
+// GET /api/fasilitas/:id (Detail satu master fasilitas)
+router.get("/:id", getFasilitasById);
 
-router.put(
-  "/:id",
-  authenticate,
-  authorize("SUPER_ADMIN"),
-  fasilitasController.update
-);
+// POST /api/fasilitas (Membuat master fasilitas baru - Super Admin)
+router.post("/", authenticate, createFasilitas);
 
-router.delete(
-  "/:id",
-  authenticate,
-  authorize("SUPER_ADMIN"),
-  fasilitasController.delete
-);
+// PUT /api/fasilitas/:id (Mengubah master fasilitas - Super Admin)
+router.put("/:id", authenticate, updateFasilitas);
+
+// DELETE /api/fasilitas/:id (Menghapus master fasilitas - Super Admin)
+router.delete("/:id", authenticate, deleteFasilitas);
+
+
+// ==========================================
+// 2. ROUTE PILIHAN FASILITAS TENANT (Tenant Admin)
+// ==========================================
+
+// GET /api/fasilitas/tenant/my-facilities (Melihat pilihan fasilitas tenant yang login)
+router.get("/tenant/my-facilities", authenticate, getTenantFasilitas);
+
+// PUT /api/fasilitas/tenant/my-facilities (Menyimpan/mengupdate checklist fasilitas tenant)
+router.put("/tenant/my-facilities", authenticate, updateTenantFasilitas);
 
 export default router;

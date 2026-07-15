@@ -1,127 +1,117 @@
-import spkHelper from "./helpers/spkHelper";
+import { getRawData } from "./helpers/spkHelper";
 
-class WpService {
-  async calculate(bobot: Record<number, number>) {
-    const { tenants, kategori } = await spkHelper.getData();
+interface Bobot {
+  harga: number;
+  jamOperasional: number;
+  menu: number;
+  fasilitas: number;
+  rating: number;
+  kebersihan: number;
+}
 
-    // ======================
-    // STEP 1 - Matriks
-    // ======================
+class WPService {
+  async calculate(bobot: Bobot, tenantId: number) {
+    console.trace("WPService.calculate dipanggil dari:");
+    const rawData = await getRawData();
+    if (!rawData || rawData.length === 0) throw new Error("Data tidak ditemukan.");
 
-    const matriksKeputusan = tenants.map((tenant) => ({
-      tenantId: tenant.id,
-      nama: tenant.nama,
-      nilai: tenant.nilaiKategori.map((item) => ({
-        kategoriId: item.kategoriId,
-        kategori: item.kategori.nama,
-        nilai: item.nilai,
-      })),
-    }));
+    // 1. KEPENTINGAN (Input dibagi 5) & JUMLAHNYA
+    const kepentingan = {
+      harga: Number(bobot.harga) / 5,
+      jam: Number(bobot.jamOperasional) / 5,
+      menu: Number(bobot.menu) / 5,
+      fas: Number(bobot.fasilitas) / 5,
+      rating: Number(bobot.rating) / 5,
+      keb: Number(bobot.kebersihan) / 5
+    };
+    const totalKepentingan = Object.values(kepentingan).reduce((a, b) => a + b, 0);
 
-    // ======================
-    // STEP 2 - Atribut
-    // ======================
-
-    const atribut: Record<number, "BENEFIT" | "COST"> = {
-      1: "COST",
-      2: "BENEFIT",
-      3: "BENEFIT",
-      4: "BENEFIT",
-      5: "BENEFIT",
-      6: "BENEFIT",
+    const w = {
+      harga: -(kepentingan.harga / totalKepentingan),
+      jam: (kepentingan.jam / totalKepentingan),
+      menu: (kepentingan.menu / totalKepentingan),
+      fas: (kepentingan.fas / totalKepentingan),
+      rating: (kepentingan.rating / totalKepentingan),
+      keb: (kepentingan.keb / totalKepentingan)
     };
 
-    // ======================
-    // STEP 3 - Normalisasi Bobot
-    // ======================
-
-    const totalBobot = Object.values(bobot).reduce((a, b) => a + b, 0);
-
-    const bobotNormalisasi: Record<number, number> = {};
-
-    for (const id in bobot) {
-      const nilai = bobot[Number(id)] / totalBobot;
-
-      bobotNormalisasi[Number(id)] =
-        atribut[Number(id)] === "COST" ? -nilai : nilai;
-    }
-
-    // ======================
-    // STEP 4 - Vektor S
-    // ======================
-
-    const vektorS = matriksKeputusan.map((tenant) => {
-      let hasil = 1;
-
-      const detail = tenant.nilai.map((item) => {
-        const pangkat = bobotNormalisasi[item.kategoriId];
-        const nilai = Math.pow(item.nilai, pangkat);
-
-        hasil *= nilai;
-
-        return {
-          kategori: item.kategori,
-          nilai: item.nilai,
-          bobot: pangkat,
-          hasil: Number(nilai.toFixed(6)),
-          rumus: `${item.nilai}^${pangkat.toFixed(4)} = ${nilai.toFixed(6)}`,
-        };
-      });
-
-      return {
-        tenantId: tenant.tenantId,
-        nama: tenant.nama,
-        detail,
-        total: Number(hasil.toFixed(6)),
-      };
-    });
-
-    // ======================
-    // STEP 5 - Vektor V
-    // ======================
-
-    const totalS = vektorS.reduce((a, b) => a + b.total, 0);
-
-    const preferensi = vektorS.map((item) => ({
-      tenantId: item.tenantId,
-      nama: item.nama,
-      detail: item.detail,
-      totalS: item.total,
-      nilaiV: Number((item.total / totalS).toFixed(6)),
+    // 3. DATA MENTAH
+    const rawDataFormatted = rawData.map((r: any) => ({
+      nama: r.nama,
+      harga: Number(r.harga),
+      jam: Number(r.jamOperasional),
+      menu: Number(r.menu),
+      fas: Number(r.fasilitas),
+      rating: Number(r.rating),
+      keb: Number(r.kebersihan)
     }));
 
-    // ======================
-    // STEP 6 - Ranking
-    // ======================
+    // 4. PANGKAT (X^W)
+    const pangkatData = rawDataFormatted.map((r: any) => ({
+      nama: r.nama,
+      harga: Math.pow(r.harga || 1, w.harga),
+      jam: Math.pow(r.jam || 1, w.jam),
+      menu: Math.pow(r.menu || 1, w.menu),
+      fas: Math.pow(r.fas || 1, w.fas),
+      rating: Math.pow(r.rating || 1, w.rating),
+      keb: Math.pow(r.keb || 1, w.keb)
+    }));
 
-    const ranking = [...preferensi]
-      .sort((a, b) => b.nilaiV - a.nilaiV)
-      .map((item, index) => ({
-        peringkat: index + 1,
-        tenantId: item.tenantId,
-        nama: item.nama,
-        nilai: item.nilaiV,
-        status:
-          index === 0
-            ? "Sangat Direkomendasikan"
-            : index < 5
-            ? "Direkomendasikan"
-            : "Alternatif",
-      }));
+    // 5. NILAI S + JUMLAH S
+    const sValues = pangkatData.map((r: any) => ({
+      nama: r.nama,
+      s: r.harga * r.jam * r.menu * r.fas * r.rating * r.keb
+    }));
+    const totalS = sValues.reduce((a, b) => a + b.s, 0);
 
-    const rekomendasi = ranking.slice(0, 5);
+    // 6. NILAI V (S / Total S)
+    const vValues = sValues.map(r => ({
+      nama: r.nama,
+      v: r.s / totalS
+    }));
 
+    // 7. RANGKING
+    const ranking = [...vValues]
+      .map(r => ({ nama: r.nama, skor: r.v }))
+      .sort((a, b) => b.skor - a.skor);
+
+    // Return Data dengan Struktur yang Teratur
     return {
-      metode: "WP",
-      bobotInput: bobot,
-      bobotNormalisasi,
-      matriksKeputusan,
-      vektorS,
-      preferensi,
-      ranking,
-      rekomendasi,
+      name: "WP",
+      steps: [
+        { 
+          // Step 0 (Index 0): Kepentingan
+          data: [kepentingan], 
+          total: totalKepentingan 
+        },
+        { 
+          // Step 1 (Index 1): Bobot W
+          data: [w] 
+        },
+        { 
+          // Step 2 (Index 2): Data Mentah
+          data: rawDataFormatted 
+        },
+        { 
+          // Step 3 (Index 3): Pangkat
+          data: pangkatData 
+        },
+        { 
+          // Step 4 (Index 4): Nilai S
+          data: sValues, 
+          totalS: totalS 
+        },
+        { 
+          // Step 5 (Index 5): Nilai V
+          data: vValues 
+        },
+        { 
+          // Step 6 (Index 6): Ranking
+          data: ranking 
+        }
+      ]
     };
   }
 }
 
-export default new WpService();
+export default new WPService();

@@ -1,28 +1,10 @@
 import prisma from "../../config/prisma";
+import { getTenantScores } from "../spkTransformer";
 
-export class SpkHelper {
-  async getData() {
-    const tenants = await prisma.tenant.findMany({
-      include: {
-        nilaiKategori: {
-          include: {
-            kategori: true,
-          },
-        },
-      },
-    });
-
-    const kategori = await prisma.kategori.findMany({
-      orderBy: {
-        id: "asc",
-      },
-    });
-
-    return {
-      tenants,
-      kategori,
-    };
-  }
-}
-
-export default new SpkHelper();
+export const getRawData = async () => {
+  const tenants = await prisma.tenant.findMany({ where: { status: 'APPROVED' } });
+  return await Promise.all(tenants.map(async (t) => {
+    const s = await getTenantScores(t.id);
+    return { nama: t.nama, ...s };
+  }));
+};

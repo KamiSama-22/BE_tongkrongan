@@ -1,89 +1,74 @@
 import { Request, Response } from "express";
-import menuService from "../services/menuService";
+import MenuService from "../services/menuService";
 
-class MenuController {
-  async getAll(req: Request, res: Response) {
-    try {
-      const data = await menuService.getAll();
-
-      res.json({
-        success: true,
-        data,
-      });
-    } catch (err: any) {
-      res.status(500).json({
-        success: false,
-        message: err.message,
-      });
-    }
-  }
-
-  async getById(req: Request, res: Response) {
-    try {
-      const data = await menuService.getById(Number(req.params.id));
-
-      res.json({
-        success: true,
-        data,
-      });
-    } catch (err: any) {
-      res.status(404).json({
-        success: false,
-        message: err.message,
-      });
-    }
-  }
-
-  async create(req: Request, res: Response) {
-    try {
-      const data = await menuService.create(req.body);
-
-      res.status(201).json({
-        success: true,
-        data,
-      });
-    } catch (err: any) {
-      res.status(400).json({
-        success: false,
-        message: err.message,
-      });
-    }
-  }
-
-  async update(req: Request, res: Response) {
-    try {
-      const data = await menuService.update(
-        Number(req.params.id),
-        req.body
-      );
-
-      res.json({
-        success: true,
-        data,
-      });
-    } catch (err: any) {
-      res.status(400).json({
-        success: false,
-        message: err.message,
-      });
-    }
-  }
-
-  async delete(req: Request, res: Response) {
-    try {
-      await menuService.delete(Number(req.params.id));
-
-      res.json({
-        success: true,
-        message: "Menu berhasil dihapus",
-      });
-    } catch (err: any) {
-      res.status(400).json({
-        success: false,
-        message: err.message,
-      });
-    }
-  }
+// Helper untuk cast request agar TypeScript tidak komplain
+interface AuthRequest extends Request {
+  user?: {
+    id: number;
+    role: string;
+    tenantId: number;
+  };
 }
 
-export default new MenuController();
+// 1. Mengambil semua menu milik tenant yang login
+export const getAll = async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(403).json({ success: false, message: "Akses ditolak" });
+
+    const data = await MenuService.getAll(tenantId);
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// 2. Mengambil menu berdasarkan ID
+export const getById = async (req: AuthRequest, res: Response) => {
+  try {
+    // Service harus memastikan menu yang diambil memang milik tenantId user tersebut
+    const data = await MenuService.getById(Number(req.params.id));
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(404).json({ success: false, message: err.message });
+  }
+};
+
+// 3. Membuat menu baru (tenantId dipaksa dari token, bukan body)
+export const create = async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(403).json({ success: false, message: "Akses ditolak" });
+
+    // Gabungkan data body dengan tenantId dari Token
+    const menuData = { ...req.body, tenantId };
+    
+    const data = await MenuService.create(menuData);
+    res.status(201).json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// 4. Update menu (Pastikan menu yang diupdate milik tenant yang login)
+export const update = async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    // Logika tambahan di Service nanti harus memastikan tenantId cocok
+    const data = await MenuService.update(Number(req.params.id), req.body, tenantId);
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// 5. Menghapus menu
+export const deleteMenu = async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    const result = await MenuService.delete(Number(req.params.id), tenantId);
+    res.json({ success: true, message: result.message });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

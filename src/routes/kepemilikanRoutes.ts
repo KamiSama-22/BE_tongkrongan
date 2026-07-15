@@ -5,24 +5,10 @@ import { authorize } from "../middleware/role";
 
 const router = Router();
 
-router.get(
-  "/",
-  authenticate,
-  kepemilikanController.getAll
-);
-
-router.post(
-  "/",
-  authenticate,
-  authorize("TENANT_ADMIN"),
-  kepemilikanController.create
-);
-
-router.delete(
-  "/",
-  authenticate,
-  authorize("TENANT_ADMIN"),
-  kepemilikanController.delete
-);
+// Bungkus setiap controller dengan (req, res) => ...
+router.get("/tenant/:tenantId", authenticate, (req, res) => kepemilikanController.getByTenant(req, res));
+router.get("/", authenticate, (req, res) => kepemilikanController.getAll(req, res));
+router.post("/", authenticate, authorize("TENANT_ADMIN"), (req, res) => kepemilikanController.create(req, res));
+router.delete("/", authenticate, authorize("TENANT_ADMIN"), (req, res) => kepemilikanController.delete(req, res));
 
 export default router;

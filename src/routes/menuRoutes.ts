@@ -1,32 +1,16 @@
 import { Router } from "express";
-import menuController from "../controllers/menuController";
-import { authenticate } from "../middleware/auth";
-import { authorize } from "../middleware/role";
+import * as menuController from "../controllers/menuController"; 
+import { authenticate } from "../middleware/auth"; // Pastikan import ini ada
 
 const router = Router();
 
-router.get("/", menuController.getAll);
+// Tambahkan 'authenticate' agar 'req.user' tersedia di controller
+router.get("/", authenticate, menuController.getAll);
 router.get("/:id", menuController.getById);
 
-router.post(
-  "/",
-  authenticate,
-  authorize("TENANT_ADMIN"),
-  menuController.create
-);
-
-router.put(
-  "/:id",
-  authenticate,
-  authorize("TENANT_ADMIN"),
-  menuController.update
-);
-
-router.delete(
-  "/:id",
-  authenticate,
-  authorize("TENANT_ADMIN"),
-  menuController.delete
-);
+// Tambahkan 'authenticate' juga di sini agar aman
+router.post("/", authenticate, menuController.create);
+router.put("/:id", authenticate, menuController.update);
+router.delete("/:id", authenticate, menuController.deleteMenu);
 
 export default router;

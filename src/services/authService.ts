@@ -1,7 +1,12 @@
 import prisma from "../config/prisma";
 import bcrypt from "bcrypt";
-import { generateToken } from "../config/jwt";
+import jwt from "jsonwebtoken";
 import { Role } from "@prisma/client";
+
+interface LoginDTO {
+  email: string;
+  password: string;
+}
 
 interface RegisterDTO {
   username: string;
@@ -10,79 +15,81 @@ interface RegisterDTO {
   role: Role;
 }
 
-interface LoginDTO {
-  email: string;
-  password: string;
-}
-
 class AuthService {
+  
+  // ===================================
+  // FUNGSI REGISTER YANG HILANG
+  // ===================================
   async register(data: RegisterDTO) {
-    const exist = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: data.email },
-          { username: data.username }
-        ]
-      }
+    const { username, email, password, role } = data;
+
+    // 1. Cek apakah email sudah terdaftar
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
     });
 
-    if (exist) {
-      throw new Error("Email atau Username sudah digunakan");
+    if (existingUser) {
+      throw new Error("Email sudah terdaftar!");
     }
 
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    // 2. Hash password (enkripsi)
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.create({
-  data: {
-    username: data.username,
-    email: data.email,
-    password: hashedPassword,
-    role: data.role
-  }
-});
-
-return {
-  id: user.id,
-  username: user.username,
-  email: user.email,
-  role: user.role,
-  createdAt: user.createdAt
-};
-  }
-
-  async login(data: LoginDTO) {
-    const user = await prisma.user.findUnique({
-      where: {
-        email: data.email
-      }
+    // 3. Simpan user baru ke database
+    const newUser = await prisma.user.create({
+      data: {
+        username,
+        email,
+        password: hashedPassword,
+        role: role || "PENGGUNA", // Default jika role tidak dikirim
+      },
     });
 
-    if (!user) {
-      throw new Error("Email tidak ditemukan");
-    }
+    // Hilangkan password dari response demi keamanan
+    const { password: _, ...userWithoutPassword } = newUser;
+    return userWithoutPassword;
+  }
 
-    const match = await bcrypt.compare(
-      data.password,
-      user.password
+  // ===================================
+  // FUNGSI LOGIN
+  // ===================================
+  async login(credentials: LoginDTO) {
+    const { email, password } = credentials;
+
+    // 1. Cari user di database beserta relasi ke tenant-nya
+    const user = await prisma.user.findUnique({ 
+      where: { email },
+      include: { tenant: true } // Mengambil relasi tenant
+    });
+
+    if (!user) throw new Error("Email tidak terdaftar");
+
+    // 2. Verifikasi password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) throw new Error("Password salah");
+
+    // 3. Ambil tenantId secara dinamis
+    const tenantId = user.role === 'SUPER_ADMIN' ? null : (user as any).tenant?.id || null;
+
+    // 4. Generate Token
+    const token = jwt.sign(
+      { 
+        id: user.id, 
+        role: user.role, 
+        tenantId: tenantId 
+      },
+      "rahasia123",
+      { expiresIn: "24h" }
     );
 
-    if (!match) {
-      throw new Error("Password salah");
-    }
-
-    const token = generateToken({
-      id: user.id,
-      role: user.role
-    });
-
-    return {
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role
-      }
+    return { 
+      token, 
+      user: { 
+        id: user.id, 
+        username: user.username, 
+        role: user.role,
+        tenantId: tenantId 
+      } 
     };
   }
 }

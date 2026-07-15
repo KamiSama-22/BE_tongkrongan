@@ -14,6 +14,11 @@ class KepemilikanService {
       },
     });
   }
+  async getByTenant(tenantId: number) {
+  return await prisma.kepemilikan.findMany({
+    where: { tenantId },
+  });
+}
 
   async create(tenantId: number, fasilitasId: number) {
     return prisma.kepemilikan.create({
