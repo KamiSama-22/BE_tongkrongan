@@ -16,13 +16,24 @@ interface CreateTenantDTO {
 }
 
 class TenantService {
-  async getAll() {
-    return await prisma.tenant.findMany({
+async getAll() {
+    const tenants = await prisma.tenant.findMany({
       where: { status: "APPROVED" },
       include: {
         admin: { select: { id: true, username: true, email: true } },
+        // Menambahkan hitungan menu secara otomatis
+        _count: {
+          select: {
+            menus: true,
+          },
+        },
       },
     });
+
+    return tenants.map((tenant) => ({
+      ...tenant,
+      totalMenu: tenant._count?.menus || 0, 
+    }));
   }
 
   async getPending() {
